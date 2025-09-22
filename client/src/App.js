@@ -67,7 +67,7 @@ function App() {
   // Simple and safe message renderer
   const renderBotMessage = (content, messageIndex) => {
     if (!content) return "";
-    
+
     const contentStr = String(content);
     const elements = [];
     let currentIndex = 0;
@@ -75,7 +75,7 @@ function App() {
     // Find all code blocks first
     const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
     const headingRegex = /^(#{1,6})\s+(.+)$/gm;
-    
+
     let lastIndex = 0;
     let match;
     let elementKey = 0;
@@ -98,7 +98,7 @@ function App() {
       const language = match[1] || 'javascript';
       const code = match[2] || '';
       const codeBlockId = `${messageIndex}-${elementKey}`;
-      
+
       elements.push(
         <div key={`code-${elementKey++}`} className="my-4 border border-gray-300 rounded-lg overflow-hidden relative">
           <div className="flex justify-between items-center bg-gray-100 px-4 py-2 border-b border-gray-300">
@@ -123,7 +123,7 @@ function App() {
           </pre>
         </div>
       );
-      
+
       lastIndex = match.index + match[0].length;
     }
 
@@ -146,13 +146,13 @@ function App() {
               5: "text-sm font-bold mt-2 mb-1 text-gray-900",
               6: "text-xs font-bold mt-2 mb-1 text-gray-900"
             };
-            
+
             elements.push(
               React.createElement(
                 `h${level}`,
-                { 
-                  key: `heading-${elementKey++}`, 
-                  className: headingClasses[level] || headingClasses[1] 
+                {
+                  key: `heading-${elementKey++}`,
+                  className: headingClasses[level] || headingClasses[1]
                 },
                 text
               )
@@ -190,7 +190,7 @@ function App() {
     const typeInterval = setInterval(() => {
       if (wordIndex < words.length) {
         currentText += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
-        
+
         setChats((prevChats) =>
           prevChats.map((chat) => {
             if (chat.id === chatId) {
@@ -207,7 +207,7 @@ function App() {
             return chat;
           })
         );
-        
+
         wordIndex++;
       } else {
         setIsTyping(false);
@@ -252,8 +252,8 @@ function App() {
       // Update existing chat title if it's still "New Chat"
       const currentChat = updatedChats.find(chat => chat.id === chatId);
       if (currentChat && currentChat.title === "New Chat") {
-        updatedChats = updatedChats.map(chat => 
-          chat.id === chatId 
+        updatedChats = updatedChats.map(chat =>
+          chat.id === chatId
             ? { ...chat, title: input.length > 40 ? input.substring(0, 40) + "..." : input.trim() }
             : chat
         );
@@ -277,27 +277,54 @@ function App() {
         chat.id === chatId ? { ...chat, messages: [...chat.messages, botMessage] } : chat
       )
     );
+    // Start blinking animation
+    let blinkState = 0;
+    const blinkMessages = [
+      "Generate solution...",
+      "Finding the best solution...",
+      "Generate solution...",
+      "Finding the best solution..."
+    ];
+
+    const blinkInterval = setInterval(() => {
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.id === chatId) {
+            const messages = [...chat.messages];
+            messages[messages.length - 1] = {
+              ...messages[messages.length - 1],
+              content: blinkMessages[blinkState % blinkMessages.length],
+              isTyping: true
+            };
+            return { ...chat, messages };
+          }
+          return chat;
+        })
+      );
+      blinkState++;
+    }, 3000);
 
     try {
       // const res = await fetch("http://localhost:3000/api/generate");
       // const data = await res.json();
       // typeMessage(data.generated, chatId);
-       const res = await fetch("http://localhost:3000/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt: input.trim() })
-  });
-  const data = await res.json();
-  typeMessage(data.generated, chatId);
+      const res = await fetch("http://localhost:3000/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: input.trim() })
+      });
+      const data = await res.json();
+      clearInterval(blinkInterval);
+      typeMessage(data.generated, chatId);
     } catch (err) {
       console.error("Error fetching response:", err);
       setIsTyping(false);
-      const errorMessage = { 
-        role: "bot", 
-        content: "Sorry, I encountered an error while generating the response. Please try again.", 
-        isTyping: false 
+      const errorMessage = {
+        role: "bot",
+        content: "Sorry, I encountered an error while generating the response. Please try again.",
+        isTyping: false
       };
-      
+
       setChats((prevChats) =>
         prevChats.map((chat) => {
           if (chat.id === chatId) {
@@ -319,9 +346,9 @@ function App() {
   };
 
   const handleNewChat = () => {
-    const newChat = { 
-      id: Date.now(), 
-      title: "New Chat", 
+    const newChat = {
+      id: Date.now(),
+      title: "New Chat",
       messages: [],
       createdAt: new Date()
     };
@@ -381,33 +408,68 @@ function App() {
     setTempMessage("");
 
     const chatId = currentChatId;
-    const botMessage = { role: "bot", content: "", isTyping: true };
+    // const botMessage = { role: "bot", content: "", isTyping: true };
+    // setChats((prevChats) =>
+    //   prevChats.map((chat) =>
+    //     chat.id === chatId ? { ...chat, messages: [...chat.messages, botMessage] } : chat
+    //   )
+    // );
+    // Placeholder bot message with blinking animation
+    const botMessage = { role: "bot", content: "Generate solution...", isTyping: true };
     setChats((prevChats) =>
       prevChats.map((chat) =>
         chat.id === chatId ? { ...chat, messages: [...chat.messages, botMessage] } : chat
       )
     );
 
+    // Start blinking animation
+    let blinkState = 0;
+    const blinkMessages = [
+      "Generate solution...",
+      "Finding the best solution...",
+      "Generate solution...",
+      "Finding the best solution..."
+    ];
+
+    const blinkInterval = setInterval(() => {
+      setChats((prevChats) =>
+        prevChats.map((chat) => {
+          if (chat.id === chatId) {
+            const messages = [...chat.messages];
+            messages[messages.length - 1] = {
+              ...messages[messages.length - 1],
+              content: blinkMessages[blinkState % blinkMessages.length],
+              isTyping: true
+            };
+            return { ...chat, messages };
+          }
+          return chat;
+        })
+      );
+      blinkState++;
+    }, 3000);
+
     try {
       // const res = await fetch("http://localhost:3000/api/generate");
       // const data = await res.json();
       // typeMessage(data.generated, chatId);
-       const res = await fetch("http://localhost:3000/api/generate", {
+      const res = await fetch("http://localhost:3000/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: tempMessage.trim() })
       });
       const data = await res.json();
+      clearInterval(blinkInterval);
       typeMessage(data.generated, chatId);
     } catch (err) {
       console.error("Error fetching response:", err);
       setIsTyping(false);
-      const errorMessage = { 
-        role: "bot", 
-        content: "Sorry, I encountered an error while generating the response. Please try again.", 
-        isTyping: false 
+      const errorMessage = {
+        role: "bot",
+        content: "Sorry, I encountered an error while generating the response. Please try again.",
+        isTyping: false
       };
-      
+
       setChats((prevChats) =>
         prevChats.map((chat) => {
           if (chat.id === chatId) {
@@ -431,7 +493,7 @@ function App() {
       {/* Sidebar */}
       <div className="w-64 bg-gray-900 text-white flex flex-col">
         <div className="p-4">
-          <button 
+          <button
             onClick={handleNewChat}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
           >
@@ -439,18 +501,17 @@ function App() {
             New chat
           </button>
         </div>
-        
+
         <div className="flex-1 overflow-y-auto px-2">
           {chats.map((chat) => (
             <div
               key={chat.id}
-              className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors mb-1 ${
-                chat.id === currentChatId ? "bg-gray-800" : "hover:bg-gray-800"
-              }`}
+              className={`group flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors mb-1 ${chat.id === currentChatId ? "bg-gray-800" : "hover:bg-gray-800"
+                }`}
               onClick={() => handleSelectChat(chat.id)}
             >
               <MessageSquare size={16} className="text-gray-400 flex-shrink-0" />
-              
+
               {editingChatId === chat.id ? (
                 <div className="flex-1 flex items-center gap-2">
                   <input
@@ -465,14 +526,14 @@ function App() {
                     }}
                     onBlur={() => saveEditedTitle(chat.id)}
                   />
-                  <button 
-                    onClick={() => saveEditedTitle(chat.id)} 
+                  <button
+                    onClick={() => saveEditedTitle(chat.id)}
                     className="text-green-400 hover:text-green-300 p-1"
                   >
                     <Check size={14} />
                   </button>
-                  <button 
-                    onClick={cancelEditing} 
+                  <button
+                    onClick={cancelEditing}
                     className="text-red-400 hover:text-red-300 p-1"
                   >
                     <X size={14} />
@@ -480,7 +541,7 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <span 
+                  <span
                     className="flex-1 truncate text-sm cursor-pointer"
                     onDoubleClick={() => startEditingTitle(chat.id, chat.title)}
                   >
@@ -511,7 +572,7 @@ function App() {
             <div className="border-b border-gray-200 p-4">
               <h1 className="text-lg font-medium">{currentChat.title}</h1>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {currentChat.messages.map((msg, idx) => (
                 <div key={idx} className="max-w-none">
@@ -602,11 +663,10 @@ function App() {
                   <button
                     onClick={handleSend}
                     disabled={!input.trim() || isTyping}
-                    className={`p-2 rounded-full transition-all duration-200 ${
-                      !input.trim() || isTyping
+                    className={`p-2 rounded-full transition-all duration-200 ${!input.trim() || isTyping
                         ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                         : "bg-gray-900 text-white hover:bg-gray-700 shadow-sm"
-                    }`}
+                      }`}
                   >
                     <Send size={18} />
                   </button>
@@ -621,7 +681,7 @@ function App() {
               <p className="text-gray-600 text-lg max-w-md">
                 Start a conversation by creating a new chat or selecting an existing one.
               </p>
-              <button 
+              <button
                 onClick={handleNewChat}
                 className="inline-flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
               >
