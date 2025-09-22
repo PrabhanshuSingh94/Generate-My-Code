@@ -39,10 +39,13 @@ app.post("/api/generate", async (req, res) => {
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return res.status(400).json({ error: "Prompt is required" });
     }
-
-    // Build contents — instruct model to return code only and include language if desired
-    // Example developer prompt: "Return only the code inside triple backticks. Language: javascript"
-    const contents = typeof prompt === "string" ? prompt : String(prompt);
+    const systemInstruction = `You are a code generator. 
+                                Always return only code inside triple backticks and info about that code.
+                                Do not explain or add extra text. Try to produce the output in a limited range not large.`;
+    
+    // Combine system instruction with user prompt
+    const contents = `${systemInstruction}\n\nUser request:\n${prompt}`;
+    
 
     console.log("Calling Gemini model:", chosenModel);
 

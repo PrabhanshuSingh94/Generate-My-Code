@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Copy, Send, Plus, Edit3, Check, X, MessageSquare } from "lucide-react";
-
+import ReactMarkdown from "react-markdown";
 function App() {
   const [chats, setChats] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
@@ -64,172 +64,111 @@ function App() {
     }
   };
 
-  // Simple and safe message renderer
-  const renderBotMessage = (content, messageIndex) => {
-    if (!content) return "";
+  
+   const renderBotMessage = (content, messageIndex) => {
+    if (!content) return null;
 
-    const contentStr = String(content);
-    const elements = [];
-    let currentIndex = 0;
-
-    // Find all code blocks first
-    const codeBlockRegex = /```(\w+)?\n?([\s\S]*?)```/g;
-    const headingRegex = /^(#{1,6})\s+(.+)$/gm;
-
-    let lastIndex = 0;
-    let match;
-    let elementKey = 0;
-
-    // Process code blocks
-    while ((match = codeBlockRegex.exec(contentStr)) !== null) {
-      // Add text before code block
-      if (match.index > lastIndex) {
-        const textBefore = contentStr.substring(lastIndex, match.index).trim();
-        if (textBefore) {
-          elements.push(
-            <p key={`text-${elementKey++}`} className="mb-3 text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {textBefore}
-            </p>
-          );
-        }
-      }
-
-      // Add code block
-      const language = match[1] || 'javascript';
-      const code = match[2] || '';
-      const codeBlockId = `${messageIndex}-${elementKey}`;
-
-      elements.push(
-        <div key={`code-${elementKey++}`} className="my-4 border border-gray-300 rounded-lg overflow-hidden relative">
-          <div className="flex justify-between items-center bg-gray-100 px-4 py-2 border-b border-gray-300">
-            <span className="text-xs text-gray-600 font-medium">{language}</span>
-            <div className="relative">
-              <button
-                onClick={() => copyToClipboard(code, codeBlockId)}
-                className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs text-gray-700 transition-colors"
-              >
-                <Copy size={12} />
-                Copy code
-              </button>
-              {copySuccess[codeBlockId] && (
-                <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
-                  {copySuccess[codeBlockId]}
+    return (
+      <ReactMarkdown
+        children={content}
+        components={{
+          code({node, inline, className, children, ...props}) {
+            const language = className ? className.replace('language-', '') : 'javascript';
+            const codeBlockId = `${messageIndex}-${Math.random()}`;
+            return !inline ? (
+              <div className="my-4 border border-gray-300 rounded-lg overflow-hidden relative">
+                <div className="flex justify-between items-center bg-gray-100 px-4 py-2 border-b border-gray-300">
+                  <span className="text-xs text-gray-600 font-medium">{language}</span>
+                  <div className="relative">
+                    <button
+                      onClick={() => copyToClipboard(children, codeBlockId)}
+                      className="flex items-center gap-1 px-2 py-1 bg-gray-200 hover:bg-gray-300 rounded text-xs text-gray-700 transition-colors"
+                    >
+                      <Copy size={12} /> Copy code
+                    </button>
+                    {copySuccess[codeBlockId] && (
+                      <div className="absolute top-full right-0 mt-1 px-2 py-1 bg-gray-800 text-white text-xs rounded shadow-lg z-10">
+                        {copySuccess[codeBlockId]}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-          <pre className="bg-gray-900 text-green-400 p-4 overflow-x-auto m-0 font-mono text-sm leading-relaxed">
-            <code>{code}</code>
-          </pre>
-        </div>
-      );
-
-      lastIndex = match.index + match[0].length;
-    }
-
-    // Add remaining text after last code block
-    if (lastIndex < contentStr.length) {
-      const remainingText = contentStr.substring(lastIndex).trim();
-      if (remainingText) {
-        // Process headings in remaining text
-        const lines = remainingText.split('\n');
-        lines.forEach((line, lineIndex) => {
-          const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
-          if (headingMatch) {
-            const level = headingMatch[1].length;
-            const text = headingMatch[2];
-            const headingClasses = {
-              1: "text-2xl font-bold mt-6 mb-4 text-gray-900",
-              2: "text-xl font-bold mt-5 mb-3 text-gray-900",
-              3: "text-lg font-bold mt-4 mb-2 text-gray-900",
-              4: "text-base font-bold mt-3 mb-2 text-gray-900",
-              5: "text-sm font-bold mt-2 mb-1 text-gray-900",
-              6: "text-xs font-bold mt-2 mb-1 text-gray-900"
-            };
-
-            elements.push(
-              React.createElement(
-                `h${level}`,
-                {
-                  key: `heading-${elementKey++}`,
-                  className: headingClasses[level] || headingClasses[1]
-                },
-                text
-              )
-            );
-          } else if (line.trim()) {
-            elements.push(
-              <p key={`line-${elementKey++}`} className="mb-3 text-gray-800 leading-relaxed">
-                {line.trim()}
-              </p>
+                <pre className="bg-gray-900 text-green-400 p-4 overflow-x-auto m-0 font-mono text-sm leading-relaxed">
+                  <code>{children}</code>
+                </pre>
+              </div>
+            ) : (
+              <code className="bg-gray-200 px-1 rounded">{children}</code>
             );
           }
-        });
-      }
-    }
-
-    // If no elements were created, return the original text
-    if (elements.length === 0) {
-      return (
-        <p className="mb-3 text-gray-800 leading-relaxed whitespace-pre-wrap">
-          {contentStr}
-        </p>
-      );
-    }
-
-    return <>{elements}</>;
+        }}
+      />
+    );
   };
+
 
   // Typing animation function
-  const typeMessage = (message, chatId) => {
-    setIsTyping(true);
-    const words = message.split(' ');
-    let currentText = '';
-    let wordIndex = 0;
+ const typeMessage = (message, chatId) => {
+  setIsTyping(true);
 
-    const typeInterval = setInterval(() => {
-      if (wordIndex < words.length) {
-        currentText += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
+  // Detect if the whole message is just a code block
+  const codeBlockRegex = /^```[\s\S]*```$/;
 
-        setChats((prevChats) =>
-          prevChats.map((chat) => {
-            if (chat.id === chatId) {
-              const messages = [...chat.messages];
-              if (messages.length > 0 && messages[messages.length - 1].role === "bot") {
-                messages[messages.length - 1] = {
-                  ...messages[messages.length - 1],
-                  content: currentText,
-                  isTyping: true
-                };
-              }
-              return { ...chat, messages };
+  if (codeBlockRegex.test(message)) {
+    // Directly render full code block (no typing effect)
+    setChats(prevChats =>
+      prevChats.map(chat => {
+        if (chat.id === chatId) {
+          const messages = [...chat.messages];
+          messages[messages.length - 1] = {
+            ...messages[messages.length - 1],
+            content: message,
+            isTyping: false
+          };
+          return { ...chat, messages };
+        }
+        return chat;
+      })
+    );
+    setIsTyping(false);
+    return;
+  }
+
+  // Otherwise, do typing effect for normal text (headings, paragraphs, etc.)
+  const words = message.split(' ');
+  let currentText = '';
+  let wordIndex = 0;
+
+  const typeInterval = setInterval(() => {
+    if (wordIndex < words.length) {
+      currentText += (wordIndex > 0 ? ' ' : '') + words[wordIndex];
+
+      setChats(prevChats =>
+        prevChats.map(chat => {
+          if (chat.id === chatId) {
+            const messages = [...chat.messages];
+            if (messages.length > 0 && messages[messages.length - 1].role === "bot") {
+              messages[messages.length - 1] = {
+                ...messages[messages.length - 1],
+                content: currentText,
+                isTyping: true
+              };
             }
-            return chat;
-          })
-        );
+            return { ...chat, messages };
+          }
+          return chat;
+        })
+      );
 
-        wordIndex++;
-      } else {
-        setIsTyping(false);
-        setChats((prevChats) =>
-          prevChats.map((chat) => {
-            if (chat.id === chatId) {
-              const messages = [...chat.messages];
-              if (messages.length > 0 && messages[messages.length - 1].role === "bot") {
-                messages[messages.length - 1] = {
-                  ...messages[messages.length - 1],
-                  isTyping: false
-                };
-              }
-              return { ...chat, messages };
-            }
-            return chat;
-          })
-        );
-        clearInterval(typeInterval);
-      }
-    }, 50);
-  };
+      wordIndex++;
+    } else {
+      setIsTyping(false);
+      clearInterval(typeInterval);
+    }
+  }, 50);
+};
+
+
 
   // Handle sending message
   const handleSend = async () => {
@@ -280,9 +219,9 @@ function App() {
     // Start blinking animation
     let blinkState = 0;
     const blinkMessages = [
-      "Generate solution...",
+      "Generating solution...",
       "Finding the best solution...",
-      "Generate solution...",
+      "Generating solution...",
       "Finding the best solution..."
     ];
 
@@ -305,9 +244,6 @@ function App() {
     }, 3000);
 
     try {
-      // const res = await fetch("http://localhost:3000/api/generate");
-      // const data = await res.json();
-      // typeMessage(data.generated, chatId);
       const res = await fetch("http://localhost:3000/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -408,13 +344,6 @@ function App() {
     setTempMessage("");
 
     const chatId = currentChatId;
-    // const botMessage = { role: "bot", content: "", isTyping: true };
-    // setChats((prevChats) =>
-    //   prevChats.map((chat) =>
-    //     chat.id === chatId ? { ...chat, messages: [...chat.messages, botMessage] } : chat
-    //   )
-    // );
-    // Placeholder bot message with blinking animation
     const botMessage = { role: "bot", content: "Generate solution...", isTyping: true };
     setChats((prevChats) =>
       prevChats.map((chat) =>
@@ -422,12 +351,11 @@ function App() {
       )
     );
 
-    // Start blinking animation
     let blinkState = 0;
     const blinkMessages = [
-      "Generate solution...",
+      "Generating solution...",
       "Finding the best solution...",
-      "Generate solution...",
+      "Generating solution...",
       "Finding the best solution..."
     ];
 
@@ -450,9 +378,6 @@ function App() {
     }, 3000);
 
     try {
-      // const res = await fetch("http://localhost:3000/api/generate");
-      // const data = await res.json();
-      // typeMessage(data.generated, chatId);
       const res = await fetch("http://localhost:3000/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -489,9 +414,9 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-gray-900 flex">
+    <div className="h-screen bg-white text-gray-900 flex">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col">
+      <div className="w-64 h-screen overflow-y-auto bg-gray-900 text-white flex flex-col">
         <div className="p-4">
           <button
             onClick={handleNewChat}
@@ -566,7 +491,7 @@ function App() {
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="h-screen overflow-y-auto flex-1 flex flex-col">
         {currentChat ? (
           <>
             <div className="border-b border-gray-200 p-4">
@@ -654,7 +579,7 @@ function App() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    placeholder="Message ChatGPT..."
+                    placeholder="Message Alien..."
                     disabled={isTyping}
                     className="flex-1 bg-transparent py-2 resize-none border-none outline-none min-h-6 max-h-48 text-gray-900 placeholder-gray-500"
                     rows={1}
